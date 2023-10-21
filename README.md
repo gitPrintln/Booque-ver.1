@@ -16,7 +16,7 @@ HTML/CSS/Java Script
 결제
 # 내가 맡은 기능
 - 블로그(댓글)
-## Create
+###### Create
 PostReplyController.java 일부
     @PostMapping
     public ResponseEntity<Integer> registerReply(@RequestBody ReplyRegisterDto dto) {

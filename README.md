@@ -16,10 +16,20 @@ HTML/CSS/Java Script
 결제
 # 내가 맡은 기능
 - 블로그(댓글)
+## Create
+PostReplyController.java 일부
+    @PostMapping
+    public ResponseEntity<Integer> registerReply(@RequestBody ReplyRegisterDto dto) {
+        log.info("registerReply()");
 
+        Integer replyWriter = replyService.create(dto);
+
+        return ResponseEntity.ok(replyWriter);
+    }
+    
 - 메인 홈 화면에서 DB 자료 불러오기
 
-- 메인 홈(검색 기능)
+- 메인 홈(검색 기능, 정렬 기능, 페이징 처리)
 
 - 조회수(페이지마다 쿠키를 적용)
 

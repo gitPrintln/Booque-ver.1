@@ -203,6 +203,52 @@ PostReplyController.java 일부
 ```
 - 메인 홈 화면에서 DB 자료 불러오기
 
+ HomeController.java 일부
+```ruby
+        // 전체 책 별점순 1~8위
+        List<Book> list = homeService.readAllRankingOrderByBookScore();
+
+        // 분야별 별점순/리뷰많은 순 순위(별점순)
+        String category = "";
+
+        // 경제/경영
+        category = "경제/경영";
+        List<Book> economyScoreList = homeService.readAllRankingCategoryOrderByBookScore(category);
+        
+        // 인문
+        category = "인문";
+        List<Book> humanitiesScoreList = homeService.readAllRankingCategoryOrderByBookScore(category);
+
+        // 소설
+        category = "소설";
+        List<Book> fictionScoreList = homeService.readAllRankingCategoryOrderByBookScore(category);
+```
+HomeService.java 일부
+```ruby
+    // 전체 별점 Top 4
+    @Transactional(readOnly = true)
+    public List<Book> readAllRankingOrderByBookScore() {
+        List<Book> list = null;
+        list = bookRepository.findTop4ByOrderByBookScoreDesc();
+        
+        return list;
+    }
+
+    // 카테고리별 별점 Top 4
+    @Transactional(readOnly = true)
+    public List<Book> readAllRankingCategoryOrderByBookScore(String category) {
+        List<Book> list = new ArrayList<>();
+        list = categoryRepository.findTop4ByCategoryOrderByBookScoreDesc(category);
+        
+        return list;
+    }
+```
+CategoryRepository.java 일부
+```ruby
+    // 메인에서 보여줄 Top8 & category별 & 별점순/리뷰순
+    List<Book> findTop4ByCategoryOrderByBookScoreDesc(String category);
+    List<Book> findTop4ByCategoryOrderByPostCountDesc(String category);
+```
 - 메인 홈(검색 기능, 정렬 기능, 페이징 처리)
 
 - 조회수(페이지마다 쿠키를 적용)

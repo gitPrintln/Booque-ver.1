@@ -99,6 +99,7 @@ postReply.js 일부
         }
         
         divReplies.innerHTML = str;
+}
 ```
 PostReplyController.java 일부
 ```ruby
@@ -251,5 +252,353 @@ CategoryRepository.java 일부
 ```
 - 메인 홈(검색 기능, 정렬 기능, 페이징 처리)
 
-- 조회수(페이지마다 쿠키를 적용)
+ ##### 검색 기능
+ 
+ SearchController.java 일부
+```ruby
+    @GetMapping("/s")
+    public String search(SearchQueryDataDto dto, Model model, @PageableDefault(size = 5) Pageable pageable) {
+        String type = dto.getType();
+        String keyword = dto.getKeyword();
+        String order = dto.getOrder();
+        // 리뷰 수 카운트
+        List<SearchListDto> reviewCount = new ArrayList<>(); 
+        for (Book b : noPageSearchList) {
+            Integer count = postService.countPostByBookId(b.getBookId());
+            
+            SearchListDto reviewElement = SearchListDto.builder().BookId(b.getBookId()).reviewCount(count).build();
+            reviewCount.add(reviewElement);
+        }
 
+                  '
+                  '
+                  '
+            model.addAttribute("searchList", searchList);
+            model.addAttribute("storedType", type);
+            model.addAttribute("storedKeyword", keyword);
+            model.addAttribute("storedOrder", order);
+            model.addAttribute("reviewCount", reviewCount);
+            return "/search";
+}
+```
+
+ SearchService.java 일부
+```ruby
+    @Transactional(readOnly = true)
+    public List<Book> search(String type, String keyword, String order){
+        List<Book> list = null;
+        if (order.equals("0")) { // 정렬 기준이 없을 때
+            if(type.equals("all")) { // 통합 검색
+                return list = searchRepository.unifiedSearchByKeyword(keyword);
+            }  else if (type.equals("do")) { // 국내 도서 검색
+                return list = searchRepository.domesticSearchByKeyword(keyword);
+            } else if (type.equals("fo")) { // 외국 도서 검색
+                return list = searchRepository.foreignSearchByKeyword(keyword);
+            } else if (type.equals("au")) { // 저자 검색
+                return list = searchRepository.authorSearchByKeyword(keyword);
+            }
+        }
+       return list;
+}
+```
+
+ SearchRepository.java 일부
+```ruby
+    // 여기서부터는 리뷰순, 조회순에 필요한 쿼리문 시작(List 타입 리턴하는 쿼리문)
+    // 통합(제목, 저자, 출판사, 인트로) 검색
+    @Query(
+            "select b from BOOKS b"
+           + " where lower(b.bookName) like lower ('%' || :keyword || '%')"
+           + " or lower(b.author) like lower ('%' || :keyword || '%')"
+           + " or lower(b.publisher) like lower ('%' || :keyword || '%')"
+           + " or lower(b.bookIntro) like lower ('%' || :keyword || '%') order by b.bookName desc"
+    )
+    List<Book> unifiedSearchByKeyword(@Param(value = "keyword") String keyword);
+
+    // 국내 도서 검색
+    @Query(
+            "select b from BOOKS b"
+           + " where b.bookgroup = '국내도서'"
+           + " and (lower(b.bookName) like lower ('%' || :keyword || '%')"
+           + " or lower(b.author) like lower ('%' || :keyword || '%')"
+           + " or lower(b.publisher) like lower ('%' || :keyword || '%')"
+           + " or lower(b.bookIntro) like lower ('%' || :keyword || '%'))"
+           + " order by b.bookId desc"
+    )
+    List<Book> domesticSearchByKeyword(@Param(value = "keyword") String keyword);
+    
+    // 외국 도서 검색
+    @Query(
+            "select b from BOOKS b"
+                    + " where b.bookgroup = '외국도서'"
+                    + " and (lower(b.bookName) like lower ('%' || :keyword || '%')"
+                    + " or lower(b.author) like lower ('%' || :keyword || '%')"
+                    + " or lower(b.publisher) like lower ('%' || :keyword || '%')"
+                    + " or lower(b.bookIntro) like lower ('%' || :keyword || '%'))"
+                    + " order by b.bookId desc"
+            )
+    List<Book> foreignSearchByKeyword(@Param(value = "keyword") String keyword);
+    
+    // 저자(author) 검색
+    @Query(
+            "select b from BOOKS b"
+           + " where lower(b.author) like lower ('%' || :keyword || '%') order by b.author desc"
+    )
+    List<Book> authorSearchByKeyword(@Param(value = "keyword") String keyword);
+```
+
+ layout.html 일부
+```ruby
+    <form th:action="@{ /search/s }">
+    <!-- 검색 타입 -->
+    <select id="type" name="type" class="selectedType">
+            <option value="all">통합검색</option>
+            <option value="do">국내도서</option>
+            <option value="fo">외국도서</option>
+            <option value="au">저자</option>
+    </select>
+      <!-- 검색어 입력 창 -->
+        <input type="search" class="searchText" id="keyword" name="keyword" />
+        <input type="hidden" id="order" name="order" value="0"/>
+      <!-- 검색 버튼 -->
+      <button type="submit" style="border:none; background-color:black; color:white; margin-right:40px; margin-left:20px;"  onclick="nothingKeywordCheck();">
+      <i class="fa fa-search" id="btnSearch"></i></button> 
+```
+
+ ##### 정렬 기능
+ 
+ search.html 일부
+```ruby
+        <div>총 검색된 결과 : <span th:text="${searchList.totalElements}"></span></div>
+        <!-- 검색 상단바 START -->
+        <div class="selectRearrange d-inline-flex px-2 my-1 border rounded text-secondary" style="padding: 10px; padding-left: 15px;" align ="left"> 
+         <strong class="my-2">
+          <a th:href="@{ /search/s?type={type}&keyword={rekeyword}&order=hitCount (type = ${ storedType }, rekeyword = ${ storedKeyword }) }" class="w3-bar-item w3-hover-white w3-round w3-button" style="font-size: 15px; text-align:center; padding-top:5px; color:LightSlateGray; font-weight:bold;">인기도순</a>
+          <a th:href="@{ /search/s?type={type}&keyword={rekeyword}&order=publishedDate (type = ${ storedType }, rekeyword = ${ storedKeyword }) }" class="w3-bar-item w3-hover-white w3-round w3-button" style="font-size: 15px; text-align:center; padding-top:5px; color:LightSlateGray; font-weight:bold;">신상품순</a>
+          <a th:href="@{ /search/s?type={type}&keyword={rekeyword}&order=accuracy (type = ${ storedType }, rekeyword = ${ storedKeyword }) }" class="w3-bar-item w3-hover-white w3-round w3-button" style="font-size: 15px; text-align:center; padding-top:5px; color:LightSlateGray; font-weight:bold;">정확도순</a>
+          <a th:href="@{ /search/s?type={type}&keyword={rekeyword}&order=lowPrice (type = ${ storedType }, rekeyword = ${ storedKeyword }) }" class="w3-bar-item w3-hover-white w3-round w3-button" style="font-size: 15px; text-align:center; padding-top:5px; color:LightSlateGray; font-weight:bold;">최저가순</a>
+          <a th:href="@{ /search/s?type={type}&keyword={rekeyword}&order=highPrice (type = ${ storedType }, rekeyword = ${ storedKeyword }) }" class="w3-bar-item w3-hover-white w3-round w3-button" style="font-size: 15px; text-align:center; padding-top:5px; color:LightSlateGray; font-weight:bold;">최고가순</a>
+          <a th:href="@{ /search/s?type={type}&keyword={rekeyword}&order=highScore (type = ${ storedType }, rekeyword = ${ storedKeyword }) }" class="w3-bar-item w3-hover-white w3-round w3-button" style="font-size: 15px; text-align:center; padding-top:5px; color:LightSlateGray; font-weight:bold;">별점순</a>
+          <a th:href="@{ /search/s?type={type}&keyword={rekeyword}&order=reviewCount (type = ${ storedType }, rekeyword = ${ storedKeyword }) }" class="w3-bar-item w3-hover-white w3-round w3-button" style="font-size: 15px; text-align:center; padding-top:5px; color:LightSlateGray; font-weight:bold;">리뷰순</a>
+          </strong>
+        </div>
+```
+
+ SearchController.java 일부
+```ruby
+    // 검색 기능 - 검색 결과 정렬(type, keyword를 가지고 다시 order by ?, ?부분만 원하는 order에 따라 바꿔서 검색
+    @GetMapping("/s")
+    public String search(SearchQueryDataDto dto, Model model, @PageableDefault(size = 5) Pageable pageable) {
+        String type = dto.getType();
+        String keyword = dto.getKeyword();
+        String order = dto.getOrder();
+        List<Book> noPageSearchList = searchService.search(type, keyword, order);
+                              '
+                              '
+                              '
+        // 리뷰순, 조회수 순 정렬할 때 List 직접 재정렬
+        if (order.equals("reviewCount")) { // 리뷰순 정렬
+            List<SearchReadDto> list = new ArrayList<>();
+            // book리스트 + 리뷰개수리스트 = 합친 리뷰 갯수를 포함하는 bookId정보를 생성
+            for (Book s : noPageSearchList) {
+                for (SearchListDto l : reviewCount) {
+                    if (s.getBookId().equals(l.getBookId())) {
+                        SearchReadDto listElement = SearchReadDto.builder().bookId(s.getBookId()).bookName(s.getBookName())
+                                .author(s.getAuthor()).publisher(s.getPublisher()).publishedDate(s.getPublishedDate())
+                                .prices(s.getPrices()).bookImage(s.getBookImage()).reviewCount(l.getReviewCount())
+                                .bookgroup(s.getBookgroup()).category(s.getCategory())
+                                .build();
+                        list.add(listElement);
+                    }
+                }
+            }
+            
+            // 리뷰순으로 오름차순 정렬
+            list.sort(new Comparator<SearchReadDto>() {
+                @Override
+                public int compare(SearchReadDto arg0, SearchReadDto arg1) {
+                    int reviewCount0 = arg0.getReviewCount();
+                    int reviewCount1 = arg1.getReviewCount();
+                    
+                    if(reviewCount0 == reviewCount1) return 0;
+                    else if(reviewCount0 > reviewCount1) return -1;
+                    else return 1;
+                }
+            });
+         }
+                              '
+                              '
+                              '
+            model.addAttribute("searchList", reviewList);
+            model.addAttribute("storedType", type);
+            model.addAttribute("storedKeyword", keyword);
+            model.addAttribute("storedOrder", order);
+            model.addAttribute("reviewCount", reviewCount);
+            return "/search";
+}
+```
+
+ SearchService.java 일부
+```ruby
+    @Transactional(readOnly = true)
+    public List<Book> search(String type, String keyword, String order){
+        List<Book> list = null;
+        // 드랍 다운 검색 타입(value 속성): 리뷰순, 조회순
+        if (order.equals("0")) { // 정렬 기준이 없을 때
+            if(type.equals("all")) { // 통합 검색
+                return list = searchRepository.unifiedSearchByKeyword(keyword);
+            }  else if (type.equals("do")) { // 국내 도서 검색
+                return list = searchRepository.domesticSearchByKeyword(keyword);
+            } else if (type.equals("fo")) { // 외국 도서 검색
+                return list = searchRepository.foreignSearchByKeyword(keyword);
+            } else if (type.equals("au")) { // 저자 검색
+                return list = searchRepository.authorSearchByKeyword(keyword);
+            }
+        } else if (order.equals("highPrice")) { // 최고가순 정렬
+            if(type.equals("all")) { // 통합 검색
+                return list = searchRepository.researchOrderAllByHighPrice(keyword);
+            }  else if (type.equals("do")) { // 국내 도서 검색
+                String orderType = "국내도서";
+                return list = searchRepository.researchOrderByHighPrice(keyword, orderType);
+            } else if (type.equals("fo")) { // 외국 도서 검색
+                String orderType = "외국도서";
+                return list = searchRepository.researchOrderByHighPrice(keyword, orderType);
+            } else if (type.equals("au")) { // 저자 검색
+                String orderType = "저자";
+                return list = searchRepository.researchOrderByHighPrice(keyword, orderType);
+            }
+        } else if (order.equals("lowPrice")) { // 최저가순 정렬
+            if(type.equals("all")) { // 통합 검색
+                return list = searchRepository.researchOrderAllByLowPrice(keyword);
+            }  else if (type.equals("do")) { // 국내 도서 검색
+                String orderType = "국내도서";
+                return list = searchRepository.researchOrderByLowPrice(keyword, orderType);
+            } else if (type.equals("fo")) { // 외국 도서 검색
+                String orderType = "외국도서";
+                return list = searchRepository.researchOrderByLowPrice(keyword, orderType);
+            } else if (type.equals("au")) { // 저자 검색
+                String orderType = "저자";
+                return list = searchRepository.researchOrderByLowPrice(keyword, orderType);
+            }
+         }
+                                 '
+                                 '
+                                 '
+    return list;
+}
+```
+
+ SearchRepository.java 일부
+```ruby
+    // 최고가순 정렬
+    @Query(
+            "select b from BOOKS b"
+                    + " where lower(b.bookName) like lower ('%' || :keyword || '%')"
+                    + " or lower(b.author) like lower ('%' || :keyword || '%')"
+                    + " or lower(b.publisher) like lower ('%' || :keyword || '%')"
+                    + " or lower(b.bookIntro) like lower ('%' || :keyword || '%') order by b.prices desc"
+            )
+    List<Book> researchOrderAllByHighPrice(@Param(value = "keyword") String keyword);
+    @Query(
+            "select b from BOOKS b"
+                    + " where b.bookgroup = :orderType"
+                    + " and (lower(b.bookName) like lower ('%' || :keyword || '%')"
+                    + " or lower(b.author) like lower ('%' || :keyword || '%')"
+                    + " or lower(b.publisher) like lower ('%' || :keyword || '%')"
+                    + " or lower(b.bookIntro) like lower ('%' || :keyword || '%')) order by b.prices desc"
+    )
+    List<Book> researchOrderByHighPrice(@Param(value = "keyword") String keyword, 
+                                        @Param(value = "orderType") String orderType);
+```
+
+ ##### 페이징 처리
+
+ search.html 일부
+```ruby
+    <!-- 페이징 시작 -->
+        <nav aria-label="Page navigation example">
+            <ul class="pagination justify-content-center" th:if="${searchList.totalPages != 0}">
+                <li class="page-item" th:classappend="${1 == searchList.pageable.pageNumber + 1} ? 'disabled'">
+                    <a class="page-link" th:href="@{/search/s?type={type}&keyword={rekeyword}&order={reorder}
+                     (type = ${ storedType }, rekeyword = ${ storedKeyword }, reorder = ${ storedOrder }, page = ${searchList.pageable.pageNumber - 1})}">Previous</a>
+                </li>
+                <li class="page-item" th:classappend="${i == searchList.pageable.pageNumber + 1} ? 'disabled'" 
+                    th:each="i : ${#numbers.sequence(startPage, endPage)}"><a class="page-link" th:href="@{/search/s?type={type}&keyword={rekeyword}&order={reorder}
+                     (type = ${ storedType }, rekeyword = ${ storedKeyword }, reorder = ${ storedOrder }, page = ${i - 1})}" th:text="${i}">1</a>
+                </li>
+                <li class="page-item" th:classappend="${searchList.totalPages == searchList.pageable.pageNumber + 1} ? 'disabled'">
+                    <a class="page-link" th:href="@{/search/s?type={type}&keyword={rekeyword}&order={reorder}
+                     (type = ${ storedType }, rekeyword = ${ storedKeyword }, reorder = ${ storedOrder }, page = ${searchList.pageable.pageNumber + 1})}">Next</a>
+                </li>
+            </ul>
+        </nav>
+    <!-- 페이징 끝 -->
+```
+
+ SearchController.java 일부
+```ruby
+    @GetMapping("/s")
+    public String search(SearchQueryDataDto dto, Model model, @PageableDefault(size = 5) Pageable pageable) {
+        // 정렬할 리스트 or 페이지화 할 리스트 
+        Page<Book> searchList = searchService.search(type, keyword, order, pageable);
+
+            // 리스트를 Page로 변환 - 그래야 정상적으로 페이징이됨.
+            int start= (int) pageable.getOffset();
+            int end = Math.min((start + pageable.getPageSize()), list.size());            
+            Page<SearchReadDto> reviewList = new PageImpl<>(list.subList(start, end), pageable, list.size());
+
+            // 리뷰순에 적용되는 시작페이지, 끝 페이지
+            startPage = Math.max(1, reviewList.getPageable().getPageNumber() - 4);
+            endPage = Math.min(reviewList.getTotalPages(), reviewList.getPageable().getPageNumber() + 4);
+            model.addAttribute("startPage", startPage);
+            model.addAttribute("endPage", endPage);
+            // 조회순에 적용되는 시작페이지, 끝 페이지
+            startPage = Math.max(1, hitList.getPageable().getPageNumber() - 4);
+            endPage = Math.min(hitList.getTotalPages(), hitList.getPageable().getPageNumber() + 4);
+            // 페이징 - 시작페이지, 끝 페이지 (신상품순, 최저가순, 최고가순)
+            startPage = Math.max(1, searchList.getPageable().getPageNumber() - 3);
+            endPage = Math.min(searchList.getTotalPages(), searchList.getPageable().getPageNumber() + 3);
+}
+```
+
+ SearchService.java 일부
+```ruby
+    @Transactional(readOnly = true)
+    public Page<Book> search(String type, String keyword, String order, Pageable pageable){
+        Page<Book> list = null;
+                                 '
+                                 '
+                                 '
+        return list;
+    }
+```
+
+ SearchRepository.java 일부
+```ruby
+    // 신상품순, 최저가순, 최고가순에 필요한 쿼리문 시작(Page 타입 리턴하는 쿼리문)
+    // 통합(제목, 저자, 출판사, 인트로) 검색
+    @Query(
+            "select b from BOOKS b"
+           + " where lower(b.bookName) like lower ('%' || :keyword || '%')"
+           + " or lower(b.author) like lower ('%' || :keyword || '%')"
+           + " or lower(b.publisher) like lower ('%' || :keyword || '%')"
+           + " or lower(b.bookIntro) like lower ('%' || :keyword || '%') order by b.bookName desc"
+    )
+    Page<Book> unifiedSearchByKeyword(@Param(value = "keyword") String keyword, Pageable pageable);
+
+    // 국내 도서 검색
+    @Query(
+            "select b from BOOKS b"
+           + " where b.bookgroup = '국내도서'"
+           + " and (lower(b.bookName) like lower ('%' || :keyword || '%')"
+           + " or lower(b.author) like lower ('%' || :keyword || '%')"
+           + " or lower(b.publisher) like lower ('%' || :keyword || '%')"
+           + " or lower(b.bookIntro) like lower ('%' || :keyword || '%'))"
+           + " order by b.bookId desc"
+    )
+    Page<Book> domesticSearchByKeyword(@Param(value = "keyword") String keyword, Pageable pageable);
+```
+
+- 조회수(페이지마다 쿠키를 적용)
+  
+ ##### 조회수

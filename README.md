@@ -599,6 +599,83 @@ CategoryRepository.java 일부
     Page<Book> domesticSearchByKeyword(@Param(value = "keyword") String keyword, Pageable pageable);
 ```
 
-- 조회수(페이지마다 쿠키를 적용)
+- 조회수(책 상세보기 조회수, 블로그 글 조회수, 페이지마다 쿠키를 적용)
   
- ##### 조회수
+ ##### 조회수(book, post)
+
+ HitController.java 일부
+```ruby
+    // 쿠키써서 조회수 어뷰징 방지
+    // 쿠키 재적용 시간은 setMaxAge에서 시간 조절 가능, 일단 30분으로 설정
+    // bookDetail 관련 조회수
+    @GetMapping("/viewCount")
+    private void viewCountUp(Integer bookId, String username, HttpServletRequest request, HttpServletResponse response) {
+        if (username == null || username.equals("")) { // 비회원은 전부 anonymoususer로 처리
+            username = "anonymoususer";
+        }
+        Cookie viewCookie = null; // 쿠키값 정의
+        Cookie[] cookies = request.getCookies(); // 클라이언트에서 보낸 데이터에서 쿠키 값을 가져옴
+        if (cookies != null) { // 쿠키들이 있다면,
+            for (Cookie cookie : cookies) { // 있는 쿠키들 중에 bookDetail 쿠키가 있으면 viewCookie를 쿠키로 저장.
+                if (cookie.getName().equals("bookDetailViewCount")) {
+                    viewCookie = cookie;
+                }
+            }
+        }
+        
+        // 만들어진 쿠키가 없을 때
+        if (viewCookie != null) { // view 쿠키가 있다면, 
+            if (!viewCookie.getValue().contains("[" + username + "_" + bookId.toString() + "]")) { // [username_bookid] 라는 형태의 쿠키로 저장
+                bookHitsService.viewCountUp(bookId);
+                viewCookie.setValue(viewCookie.getValue() + "_[" + username + "_" + bookId + "]");
+                viewCookie.setPath("/");
+                viewCookie.setMaxAge(60 * 30);
+                response.addCookie(viewCookie);
+            }
+        } else { // view 쿠키가 없을 경우 쿠키를 만들고 조회수 1을 증가시켜주기
+            bookHitsService.viewCountUp(bookId);
+            Cookie newCookie = new Cookie("bookDetailViewCount","[" + username + "_" + bookId + "]");
+            newCookie.setPath("/");
+            newCookie.setMaxAge(60 * 30);
+            response.addCookie(newCookie);
+        }
+    }
+```
+
+ HitsService.java 일부
+```ruby
+    // 조회수 DB에 저장
+    @Transactional
+    public void viewCountUp(Integer bookId) {
+        BookHits isExist = bookHitsRepository.findByBookId(bookId);
+        BookHits dto = null;
+        log.info("isexist{}", isExist);
+        if (isExist != null && isExist.getBookId() != null) {
+            dto = bookHitsRepository.findByBookId(bookId);
+            log.info("이미 있는 저장이라면 저장 전{}", dto);
+            isExist.update(bookId, isExist.getHit()+1);
+            log.info("이미 있는 저장이라면 저장 후{}", dto);
+        } else {
+            dto = BookHits.builder().hit(1).bookId(bookId).build();
+            log.info("처음 저장이라면 저장 전{}", dto);
+            bookHitsRepository.save(dto);
+            log.info("처음 저장이라면 저장 후{}", dto);
+        }
+    }
+```
+ 책 상세보기 조회수 증가 script
+```ruby
+    <!-- 조회수 증가(책 상세보기, 리뷰 상세보기) -->
+    <script>
+    function viewHitUp(bookId, username){
+        axios.get('/viewCount', {params: {bookId : bookId, username : username}})
+           .then(response => {
+               console.log(response);
+               return true;
+           })
+           .catch(err =>{
+               console.log(err);
+           });
+    }
+    </script>
+```

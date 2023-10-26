@@ -23,7 +23,7 @@ public class HitController {
     
     
     // 쿠키써서 조회수 어뷰징 방지
-    // 쿠키 재적용 시간은 setMaxAge에서 시간 조절 가능, 일단 24시간으로 설정
+    // 쿠키 재적용 시간은 setMaxAge에서 시간 조절 가능, 일단 30분으로 설정
     // bookDetail 관련 조회수
     @GetMapping("/viewCount")
     private void viewCountUp(Integer bookId, String username, HttpServletRequest request, HttpServletResponse response) {

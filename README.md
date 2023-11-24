@@ -17,8 +17,8 @@ HTML/CSS/Java Script
 # 내가 맡은 기능
 - 블로그(댓글 CRUD)
  #### Create
-postReply.js 일부
-```ruby
+> postReply.js 일부
+```java
     // 댓글 작성 함수
     function registerNewReply() {
         // 포스트 글
@@ -54,8 +54,8 @@ postReply.js 일부
                 });
     }
 ```
-PostReplyController.java 일부
-```ruby
+> PostReplyController.java 일부
+```java
     // 댓글 작성
     @PostMapping
     public ResponseEntity<Integer> registerReply(@RequestBody ReplyRegisterDto dto) {
@@ -67,8 +67,8 @@ PostReplyController.java 일부
     }
 ```
  #### Read
-postReply.js 일부
-```ruby
+> postReply.js 일부
+```java
     // 댓글 목록 함수
     function readAllReplies(){
         const postId = document.querySelector('#postId').value;
@@ -101,8 +101,8 @@ postReply.js 일부
         divReplies.innerHTML = str;
 }
 ```
-PostReplyController.java 일부
-```ruby
+> PostReplyController.java 일부
+```java
     // 댓글 전체 리스트
     @GetMapping("/all/{postId}")
     public ResponseEntity<List<ReplyReadDto>> readAllReplies(@PathVariable Integer postId){
@@ -117,8 +117,8 @@ PostReplyController.java 일부
     }
 ```
  #### Update/Delete
-postReply.js 일부
-```ruby
+> postReply.js 일부
+```java
     // 댓글 수정/삭제 모달 보여주는 함수
     function showReplyModal(reply) {
         modalReplyId.value = reply.replyId;
@@ -179,8 +179,8 @@ postReply.js 일부
         }
     }
 ```
-PostReplyController.java 일부
-```ruby
+> PostReplyController.java 일부
+```java
     // 댓글 삭제
     @DeleteMapping("/{replyId}")
     public ResponseEntity<Integer> deleteReply(@PathVariable Integer replyId) {
@@ -204,8 +204,8 @@ PostReplyController.java 일부
 ```
 - 메인 홈 화면에서 DB 자료 불러오기
 
- HomeController.java 일부
-```ruby
+> HomeController.java 일부
+```java
         // 전체 책 별점순 1~8위
         List<Book> list = homeService.readAllRankingOrderByBookScore();
 
@@ -224,8 +224,8 @@ PostReplyController.java 일부
         category = "소설";
         List<Book> fictionScoreList = homeService.readAllRankingCategoryOrderByBookScore(category);
 ```
-HomeService.java 일부
-```ruby
+> HomeService.java 일부
+```java
     // 전체 별점 Top 4
     @Transactional(readOnly = true)
     public List<Book> readAllRankingOrderByBookScore() {
@@ -244,8 +244,8 @@ HomeService.java 일부
         return list;
     }
 ```
-CategoryRepository.java 일부
-```ruby
+> CategoryRepository.java 일부
+```java
     // 메인에서 보여줄 Top8 & category별 & 별점순/리뷰순
     List<Book> findTop4ByCategoryOrderByBookScoreDesc(String category);
     List<Book> findTop4ByCategoryOrderByPostCountDesc(String category);
@@ -254,8 +254,8 @@ CategoryRepository.java 일부
 
  ##### 검색 기능
  
- SearchController.java 일부
-```ruby
+> SearchController.java 일부
+```java
     @GetMapping("/s")
     public String search(SearchQueryDataDto dto, Model model, @PageableDefault(size = 5) Pageable pageable) {
         String type = dto.getType();
@@ -282,8 +282,8 @@ CategoryRepository.java 일부
 }
 ```
 
- SearchService.java 일부
-```ruby
+> SearchService.java 일부
+```java
     @Transactional(readOnly = true)
     public List<Book> search(String type, String keyword, String order){
         List<Book> list = null;
@@ -302,8 +302,8 @@ CategoryRepository.java 일부
 }
 ```
 
- SearchRepository.java 일부
-```ruby
+> SearchRepository.java 일부
+```java
     // 여기서부터는 리뷰순, 조회순에 필요한 쿼리문 시작(List 타입 리턴하는 쿼리문)
     // 통합(제목, 저자, 출판사, 인트로) 검색
     @Query(
@@ -347,8 +347,8 @@ CategoryRepository.java 일부
     List<Book> authorSearchByKeyword(@Param(value = "keyword") String keyword);
 ```
 
- layout.html 일부
-```ruby
+> layout.html 일부
+```java
     <form th:action="@{ /search/s }">
     <!-- 검색 타입 -->
     <select id="type" name="type" class="selectedType">
@@ -367,8 +367,8 @@ CategoryRepository.java 일부
 
  ##### 정렬 기능
  
- search.html 일부
-```ruby
+> search.html 일부
+```java
         <div>총 검색된 결과 : <span th:text="${searchList.totalElements}"></span></div>
         <!-- 검색 상단바 START -->
         <div class="selectRearrange d-inline-flex px-2 my-1 border rounded text-secondary" style="padding: 10px; padding-left: 15px;" align ="left"> 
@@ -384,8 +384,8 @@ CategoryRepository.java 일부
         </div>
 ```
 
- SearchController.java 일부
-```ruby
+> SearchController.java 일부
+```java
     // 검색 기능 - 검색 결과 정렬(type, keyword를 가지고 다시 order by ?, ?부분만 원하는 order에 따라 바꿔서 검색
     @GetMapping("/s")
     public String search(SearchQueryDataDto dto, Model model, @PageableDefault(size = 5) Pageable pageable) {
@@ -438,8 +438,8 @@ CategoryRepository.java 일부
 }
 ```
 
- SearchService.java 일부
-```ruby
+> SearchService.java 일부
+```java
     @Transactional(readOnly = true)
     public List<Book> search(String type, String keyword, String order){
         List<Book> list = null;
@@ -488,8 +488,8 @@ CategoryRepository.java 일부
 }
 ```
 
- SearchRepository.java 일부
-```ruby
+> SearchRepository.java 일부
+```java
     // 최고가순 정렬
     @Query(
             "select b from BOOKS b"
@@ -513,8 +513,8 @@ CategoryRepository.java 일부
 
  ##### 페이징 처리
 
- search.html 일부
-```ruby
+> search.html 일부
+```java
     <!-- 페이징 시작 -->
         <nav aria-label="Page navigation example">
             <ul class="pagination justify-content-center" th:if="${searchList.totalPages != 0}">
@@ -535,8 +535,8 @@ CategoryRepository.java 일부
     <!-- 페이징 끝 -->
 ```
 
- SearchController.java 일부
-```ruby
+> SearchController.java 일부
+```java
     @GetMapping("/s")
     public String search(SearchQueryDataDto dto, Model model, @PageableDefault(size = 5) Pageable pageable) {
         // 정렬할 리스트 or 페이지화 할 리스트 
@@ -561,8 +561,8 @@ CategoryRepository.java 일부
 }
 ```
 
- SearchService.java 일부
-```ruby
+> SearchService.java 일부
+```java
     @Transactional(readOnly = true)
     public Page<Book> search(String type, String keyword, String order, Pageable pageable){
         Page<Book> list = null;
@@ -573,8 +573,8 @@ CategoryRepository.java 일부
     }
 ```
 
- SearchRepository.java 일부
-```ruby
+> SearchRepository.java 일부
+```java
     // 신상품순, 최저가순, 최고가순에 필요한 쿼리문 시작(Page 타입 리턴하는 쿼리문)
     // 통합(제목, 저자, 출판사, 인트로) 검색
     @Query(
@@ -603,8 +603,8 @@ CategoryRepository.java 일부
   
  ##### 조회수(book, post)
 
- HitController.java 일부
-```ruby
+> HitController.java 일부
+```java
     // 쿠키써서 조회수 어뷰징 방지
     // 쿠키 재적용 시간은 setMaxAge에서 시간 조절 가능, 일단 30분으로 설정
     // bookDetail 관련 조회수
@@ -642,8 +642,8 @@ CategoryRepository.java 일부
     }
 ```
 
- HitsService.java 일부
-```ruby
+> HitsService.java 일부
+```java
     // 조회수 DB에 저장
     @Transactional
     public void viewCountUp(Integer bookId) {
@@ -663,8 +663,8 @@ CategoryRepository.java 일부
         }
     }
 ```
- 책 상세보기 조회수 증가 script
-```ruby
+> 책 상세보기 조회수 증가 script
+```java
     <!-- 조회수 증가(책 상세보기, 리뷰 상세보기) -->
     <script>
     function viewHitUp(bookId, username){
